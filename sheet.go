@@ -1043,12 +1043,27 @@ func attrValToInt(name string, attrs []xml.Attr) (val int, err error) {
 // attrValToFloat provides a function to convert the local names to a float64
 // by given XML attributes and specified names.
 func attrValToFloat(name string, attrs []xml.Attr) (val float64, err error) {
+	floatPtr, err := attrValToFloatPtr(name, attrs)
+	if err != nil {
+		return
+	}
+	if floatPtr != nil {
+		val = *floatPtr
+	}
+	return
+}
+
+// attrValToFloatPtr provides a function to convert the local names to a float64 pointer
+// by given XML attributes and specified names.
+func attrValToFloatPtr(name string, attrs []xml.Attr) (val *float64, err error) {
 	for _, attr := range attrs {
 		if attr.Name.Local == name {
-			val, err = strconv.ParseFloat(attr.Value, 64)
+			var f float64
+			f, err = strconv.ParseFloat(attr.Value, 64)
 			if err != nil {
 				return
 			}
+			val = &f
 		}
 	}
 	return

@@ -77,6 +77,7 @@ type Rows struct {
 	decoder                 *xml.Decoder
 	token                   xml.Token
 	curRowOpts, seekRowOpts RowOpts
+	cols                    []xlsxCol
 }
 
 // Next will return true if find the next row element.
@@ -93,6 +94,9 @@ func (rows *Rows) Next() bool {
 		}
 		switch xmlElement := token.(type) {
 		case xml.StartElement:
+			if xmlElement.Name.Local == "cols" {
+				rows.parseCols()
+			}
 			if xmlElement.Name.Local == "row" {
 				rows.curRow++
 				if rowNum, _ := attrValToInt("r", xmlElement.Attr); rowNum != 0 {
@@ -105,6 +109,27 @@ func (rows *Rows) Next() bool {
 		case xml.EndElement:
 			if xmlElement.Name.Local == "sheetData" {
 				return false
+			}
+		}
+	}
+}
+
+func (rows *Rows) parseCols() {
+	for {
+		token, _ := rows.decoder.Token()
+		if token == nil {
+			return
+		}
+		switch xmlElement := token.(type) {
+		case xml.StartElement:
+			if xmlElement.Name.Local == "col" {
+				col := xlsxCol{}
+				rows.decoder.DecodeElement(&col, &xmlElement)
+				rows.cols = append(rows.cols, col)
+			}
+		case xml.EndElement:
+			if xmlElement.Name.Local == "cols" {
+				return
 			}
 		}
 	}
@@ -217,6 +242,7 @@ type rowXMLIterator struct {
 	inElement        string
 	cellCol, cellRow int
 	cells            []string
+	xlsxC            []xlsxC
 }
 
 // rowXMLHandler parse the row XML element of the worksheet.
@@ -234,6 +260,7 @@ func (rows *Rows) rowXMLHandler(rowIterator *rowXMLIterator, xmlElement *xml.Sta
 		if val, _ := colCell.getValueFrom(rows.f, rows.sst, raw); val != "" || colCell.F != nil {
 			rowIterator.cells = append(appendSpace(blank, rowIterator.cells), val)
 		}
+		rowIterator.xlsxC = append(rowIterator.xlsxC, colCell)
 	}
 }
 
