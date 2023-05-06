@@ -1815,7 +1815,7 @@ func (f *File) NewStyle(style *Style) (int, error) {
 		return cellXfsID, err
 	}
 
-	numFmtID := newNumFmt(s, fs)
+	numFmtID := f.newNumFmt(s, fs)
 
 	if fs.Font != nil {
 		fontID, _ = f.getFontID(s, fs)
@@ -2113,7 +2113,7 @@ func getNumFmtID(styleSheet *xlsxStyleSheet, style *Style) (numFmtID int) {
 
 // newNumFmt provides a function to check if number format code in the range
 // of built-in values.
-func newNumFmt(styleSheet *xlsxStyleSheet, style *Style) int {
+func (f *File) newNumFmt(styleSheet *xlsxStyleSheet, style *Style) int {
 	dp := "0."
 	numFmtID := 164 // Default custom number format code from 164.
 	if style.DecimalPlaces < 0 || style.DecimalPlaces > 30 {
@@ -2128,7 +2128,7 @@ func newNumFmt(styleSheet *xlsxStyleSheet, style *Style) int {
 		}
 		return setCustomNumFmt(styleSheet, style)
 	}
-	_, ok := builtInNumFmt[style.NumFmt]
+	_, ok := f.getBuiltInNumFmtCode(style.NumFmt)
 	if !ok {
 		fc, currency := currencyNumFmt[style.NumFmt]
 		if !currency {

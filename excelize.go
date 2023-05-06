@@ -80,6 +80,9 @@ type charsetTranscoderFn func(charset string, input io.Reader) (rdr io.Reader, e
 // should be less than or equal to UnzipSizeLimit, the default value is
 // 16MB.
 //
+// Locale specifies the file parse locale, The resolution of the locale
+// in the file will be affected;
+//
 // ShortDateFmtCode specifies the short date number format code. In the
 // spreadsheet applications, date formats display date and time serial numbers
 // as date values. Date formats that begin with an asterisk (*) respond to
@@ -97,6 +100,7 @@ type Options struct {
 	RawCellValue      bool
 	UnzipSizeLimit    int64
 	UnzipXMLSizeLimit int64
+	Locale            string
 	ShortDateFmtCode  string
 	LongDateFmtCode   string
 	LongTimeFmtCode   string

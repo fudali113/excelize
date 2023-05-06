@@ -875,6 +875,62 @@ func TestFormattedValue(t *testing.T) {
 
 	assert.Equal(t, "0_0", format("0_0", "", false, CellTypeNumber, nil))
 
+	// Test format value with built-in number format zh-cn
+	originalFileOptions := f.options
+	f.options = &Options{
+		Locale: "zh-CN",
+	}
+	styleID31, err := f.NewStyle(&Style{
+		NumFmt: 31,
+		Lang:   "zh-cn",
+	})
+	assert.NoError(t, err)
+	styleID57, err := f.NewStyle(&Style{
+		NumFmt: 57,
+		Lang:   "zh-cn",
+	})
+	assert.NoError(t, err)
+	result, err = f.formattedValue(&xlsxC{S: styleID31, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "2019年3月4日", result)
+	result, err = f.formattedValue(&xlsxC{S: styleID57, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "2019年3月", result)
+	f.options = originalFileOptions
+
+	// Test format value with system opts
+	originalFileOptions = f.options
+	f.options = &Options{
+		Locale:           "zh-CN",
+		ShortDateFmtCode: "yyyy/m/d",
+		LongDateFmtCode:  "[$-804]yyyy\"年\"m\"月\"d\"日\"",
+		LongTimeFmtCode:  "[$-804]hh:mm:ss",
+	}
+	styleID14, err := f.NewStyle(&Style{
+		NumFmt: 14,
+	})
+	assert.NoError(t, err)
+	shortDateStr := "[$-F800]dddd, mmmm dd, yyyy"
+	styleIDSystemShortDate, err := f.NewStyle(&Style{
+		CustomNumFmt: &shortDateStr,
+	})
+	assert.NoError(t, err)
+	systemTimeStr := "[$-F400]h:mm:ss AM/PM"
+	styleIDSystemTime, err := f.NewStyle(&Style{
+		CustomNumFmt: &systemTimeStr,
+	})
+	assert.NoError(t, err)
+	result, err = f.formattedValue(&xlsxC{S: styleID14, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "2019/3/4", result)
+	result, err = f.formattedValue(&xlsxC{S: styleIDSystemShortDate, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "2019年3月4日", result)
+	result, err = f.formattedValue(&xlsxC{S: styleIDSystemTime, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "00:00:00", result)
+	f.options = originalFileOptions
+
 	// Test format value with unsupported charset workbook
 	f.WorkBook = nil
 	f.Pkg.Store(defaultXMLPathWorkbook, MacintoshCyrillicCharset)
@@ -888,6 +944,24 @@ func TestFormattedValue(t *testing.T) {
 	assert.EqualError(t, err, "XML syntax error on line 1: invalid UTF-8")
 
 	assert.Equal(t, "text", format("text", "0", false, CellTypeNumber, nil))
+}
+
+func TestFormattedValueNotSupportLocale(t *testing.T) {
+	// Set the Locale options to not support value and verify that the formattedValue
+	f := NewFile(Options{Locale: "notSupportLocale"})
+	styleID31, err := f.NewStyle(&Style{
+		NumFmt: 31,
+	})
+	result, err := f.formattedValue(&xlsxC{S: styleID31, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "43528", result)
+	styleID14, err := f.NewStyle(&Style{
+		NumFmt: 14,
+	})
+	result, err = f.formattedValue(&xlsxC{S: styleID14, V: "43528"}, false, CellTypeNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, "03-04-19", result)
+
 }
 
 func TestFormattedValueNilXfs(t *testing.T) {

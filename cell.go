@@ -1336,13 +1336,26 @@ func (f *File) getCellStringFunc(sheet, cell string, fn func(x *xlsxWorksheet, c
 	return "", nil
 }
 
-// applyBuiltInNumFmt provides a function to returns a value after formatted
-// with built-in number format code, or specified sort date format code.
-func (f *File) applyBuiltInNumFmt(c *xlsxC, fmtCode string, numFmtID int, date1904 bool, cellType CellType) string {
+// getBuiltInNumFmtCode provides a function to returns a value
+// with built-in number format code, or locale base built-in number format code,
+// or specified sort date format code.
+func (f *File) getBuiltInNumFmtCode(numFmtID int) (fmtCode string, ok bool) {
 	if numFmtID == 14 && f.options != nil && f.options.ShortDateFmtCode != "" {
-		fmtCode = f.options.ShortDateFmtCode
+		fmtCode, ok = f.options.ShortDateFmtCode, true
+		return
 	}
-	return format(c.V, fmtCode, date1904, cellType, f.options)
+	var locale string
+	if f.options != nil {
+		locale = f.options.Locale
+	}
+	if locale != "" {
+		fmtCode, ok = langNumFmt[locale][numFmtID]
+		if ok { // if in localeNumFmt, use langNumFmt result
+			return
+		}
+	}
+	fmtCode, ok = builtInNumFmt[numFmtID]
+	return
 }
 
 // formattedValue provides a function to returns a value after formatted. If
@@ -1374,8 +1387,8 @@ func (f *File) formattedValue(c *xlsxC, raw bool, cellType CellType) (string, er
 	if wb != nil && wb.WorkbookPr != nil {
 		date1904 = wb.WorkbookPr.Date1904
 	}
-	if fmtCode, ok := builtInNumFmt[numFmtID]; ok {
-		return f.applyBuiltInNumFmt(c, fmtCode, numFmtID, date1904, cellType), err
+	if fmtCode, ok := f.getBuiltInNumFmtCode(numFmtID); ok {
+		return format(c.V, fmtCode, date1904, cellType, f.options), err
 	}
 	if styleSheet.NumFmts == nil {
 		return c.V, err
